@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Career Ops Dashboard</title>
+<style>
+  :root {
+    --bg: #1e1e2e; --surface: #313244; --overlay: #45475a;
+    --text: #cdd6f4; --subtext: #a6adc8; --dim: #6c7086;
+    --blue: #89b4fa; --green: #a6e3a1; --yellow: #f9e2af;
+    --red: #f38ba8; --mauve: #cba6f7; --peach: #fab387;
+    --teal: #94e2d5; --pink: #f5c2e7;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; padding: 1rem;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Header */
+  .header { text-align: center; padding: 1.5rem 0 1rem; }
+  .header h1 { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+  .header p { color: var(--dim); font-size: 0.8rem; margin-top: 0.25rem; }
+
+  /* Metrics */
+  .metrics {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.75rem; max-width: 900px; margin: 0 auto 1.5rem;
+  }
+  .metric {
+    background: var(--surface); border-radius: var(--radius);
+    padding: 1rem; text-align: center;
+  }
+  .metric .value { font-size: 1.75rem; font-weight: 700; }
+  .metric .label { font-size: 0.75rem; color: var(--subtext); margin-top: 0.25rem; }
+
+  /* Filters */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    max-width: 1200px; margin: 0 auto 1rem; align-items: center;
+  }
+  .filters input {
+    flex: 1; min-width: 200px; padding: 0.5rem 0.75rem;
+    background: var(--surface); border: 1px solid var(--overlay);
+    border-radius: var(--radius); color: var(--text); font-size: 0.875rem;
+    outline: none;
+  }
+  .filters input::placeholder { color: var(--dim); }
+  .filters input:focus { border-color: var(--blue); }
+  .pill-group { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .pill {
+    padding: 0.3rem 0.6rem; border-radius: 999px; font-size: 0.7rem;
+    border: 1px solid var(--overlay); background: transparent;
+    color: var(--subtext); cursor: pointer; transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--blue); color: var(--text); }
+  .pill.active { background: var(--blue); color: var(--bg); border-color: var(--blue); font-weight: 600; }
+
+  /* Sort controls */
+  .sort-bar {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    max-width: 1200px; margin: 0 auto 0.75rem; align-items: center;
+    font-size: 0.75rem; color: var(--dim);
+  }
+  .sort-bar span { margin-right: 0.25rem; }
+  .sort-btn {
+    padding: 0.2rem 0.5rem; border-radius: var(--radius); font-size: 0.7rem;
+    border: 1px solid var(--overlay); background: transparent;
+    color: var(--subtext); cursor: pointer;
+  }
+  .sort-btn:hover { border-color: var(--blue); color: var(--text); }
+  .sort-btn.active { background: var(--mauve); color: var(--bg); border-color: var(--mauve); }
+
+  /* Table */
+  .table-wrap {
+    max-width: 1200px; margin: 0 auto;
+    overflow-x: auto; border-radius: var(--radius);
+    background: var(--surface);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th {
+    background: var(--overlay); padding: 0.6rem 0.75rem;
+    text-align: left; font-weight: 600; font-size: 0.7rem;
+    color: var(--subtext); text-transform: uppercase; letter-spacing: 0.05em;
+    position: sticky; top: 0; white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  th:hover { color: var(--text); }
+  th .arrow { font-size: 0.6rem; margin-left: 0.25rem; }
+  td { padding: 0.5rem 0.75rem; border-top: 1px solid var(--overlay); }
+  tr:hover td { background: rgba(137, 180, 250, 0.05); }
+
+  /* Status badges */
+  .badge {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px;
+    font-size: 0.7rem; font-weight: 600; text-transform: capitalize;
+  }
+  .badge-interview { background: rgba(137,180,250,0.2); color: var(--blue); }
+  .badge-offer { background: rgba(166,227,161,0.2); color: var(--green); }
+  .badge-responded { background: rgba(148,226,213,0.2); color: var(--teal); }
+  .badge-applied { background: rgba(203,166,247,0.2); color: var(--mauve); }
+  .badge-evaluated { background: rgba(249,226,175,0.2); color: var(--yellow); }
+  .badge-skip { background: rgba(108,112,134,0.2); color: var(--dim); }
+  .badge-rejected { background: rgba(243,139,168,0.2); color: var(--red); }
+  .badge-discarded { background: rgba(108,112,134,0.2); color: var(--dim); }
+
+  /* Score */
+  .score { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .score-high { color: var(--green); }
+  .score-mid { color: var(--yellow); }
+  .score-low { color: var(--red); }
+
+  /* Empty state */
+  .empty {
+    text-align: center; padding: 4rem 1rem; color: var(--dim);
+  }
+  .empty h2 { font-size: 1.2rem; margin-bottom: 0.5rem; color: var(--subtext); }
+
+  /* Detail row */
+  .detail-row td { background: var(--bg); padding: 0.75rem 1rem; }
+  .detail-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem; font-size: 0.75rem;
+  }
+  .detail-grid dt { color: var(--dim); font-size: 0.65rem; text-transform: uppercase; }
+  .detail-grid dd { color: var(--text); margin-bottom: 0.5rem; }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    body { padding: 0.5rem; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .hide-mobile { display: none; }
+    td, th { padding: 0.4rem 0.5rem; }
+  }
+
+  .count { font-size: 0.65rem; color: var(--dim); margin-left: 0.5rem; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Career Ops</h1>
+  <p id="generated-at"></p>
+</div>
+
+<div class="metrics" id="metrics"></div>
+
+<div class="filters">
+  <input type="text" id="search" placeholder="Search company, role, notes...">
+  <div class="pill-group" id="status-filters"></div>
+</div>
+
+<div class="sort-bar">
+  <span>Sort:</span>
+  <button class="sort-btn active" data-sort="date">Date</button>
+  <button class="sort-btn" data-sort="score">Score</button>
+  <button class="sort-btn" data-sort="company">Company</button>
+  <button class="sort-btn" data-sort="status">Status</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th data-col="number">#</th>
+        <th data-col="date">Date</th>
+        <th data-col="company">Company</th>
+        <th data-col="role">Role</th>
+        <th data-col="score">Score</th>
+        <th data-col="status">Status</th>
+        <th data-col="notes" class="hide-mobile">Notes</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<div class="empty" id="empty" style="display:none">
+  <h2>No applications yet</h2>
+  <p>Run <code>/career-ops</code> to start evaluating offers</p>
+</div>
+
+<script>
+let DATA = { apps: [], metrics: {} };
+let activeStatuses = new Set();
+let sortKey = 'date';
+let sortAsc = false;
+let expandedRow = null;
+
+const statusOrder = ['interview','offer','responded','applied','evaluated','skip','rejected','discarded'];
+const statusColors = {
+  interview: 'blue', offer: 'green', responded: 'teal', applied: 'mauve',
+  evaluated: 'yellow', skip: 'dim', rejected: 'red', discarded: 'dim'
+};
+
+function scoreClass(s) { return s >= 4 ? 'score-high' : s >= 3 ? 'score-mid' : 'score-low'; }
+
+function renderMetrics(m) {
+  const el = document.getElementById('metrics');
+  const cards = [
+    { value: m.total, label: 'Total' },
+    { value: m.actionable, label: 'Actionable' },
+    { value: m.avgScore ? m.avgScore.toFixed(1) : '-', label: 'Avg Score' },
+    { value: m.topScore ? m.topScore.toFixed(1) : '-', label: 'Top Score' },
+    { value: m.byStatus?.applied || 0, label: 'Applied' },
+    { value: m.byStatus?.interview || 0, label: 'Interviews' },
+  ];
+  el.innerHTML = cards.map(c =>
+    `<div class="metric"><div class="value">${c.value}</div><div class="label">${c.label}</div></div>`
+  ).join('');
+}
+
+function renderFilters(m) {
+  const el = document.getElementById('status-filters');
+  const statuses = statusOrder.filter(s => (m.byStatus?.[s] || 0) > 0);
+  el.innerHTML = statuses.map(s => {
+    const count = m.byStatus[s];
+    return `<button class="pill" data-status="${s}">${s} (${count})</button>`;
+  }).join('');
+
+  el.querySelectorAll('.pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const s = btn.dataset.status;
+      if (activeStatuses.has(s)) { activeStatuses.delete(s); btn.classList.remove('active'); }
+      else { activeStatuses.add(s); btn.classList.add('active'); }
+      renderTable();
+    });
+  });
+}
+
+function filteredApps() {
+  const q = document.getElementById('search').value.toLowerCase();
+  return DATA.apps.filter(a => {
+    if (activeStatuses.size > 0 && !activeStatuses.has(a.normalizedStatus)) return false;
+    if (q) {
+      const haystack = [a.company, a.role, a.notes, a.status, a.archetype || '', a.tldr || ''].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function sortApps(apps) {
+  const dir = sortAsc ? 1 : -1;
+  return [...apps].sort((a, b) => {
+    let va, vb;
+    switch (sortKey) {
+      case 'score': va = a.score; vb = b.score; break;
+      case 'company': va = a.company.toLowerCase(); vb = b.company.toLowerCase();
+        return va < vb ? -dir : va > vb ? dir : 0;
+      case 'status':
+        va = statusOrder.indexOf(a.normalizedStatus);
+        vb = statusOrder.indexOf(b.normalizedStatus);
+        if (va === -1) va = 99; if (vb === -1) vb = 99;
+        break;
+      case 'date': default: va = a.date; vb = b.date;
+        return va < vb ? -dir : va > vb ? dir : 0;
+    }
+    return (va - vb) * dir;
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  const apps = sortApps(filteredApps());
+  const emptyEl = document.getElementById('empty');
+
+  if (DATA.apps.length === 0) {
+    tbody.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = apps.length === 0 ? 'block' : 'none';
+
+  tbody.innerHTML = apps.map(a => {
+    const ns = a.normalizedStatus || 'evaluated';
+    const sc = a.score > 0 ? `<span class="score ${scoreClass(a.score)}">${a.score.toFixed(1)}</span>` : '-';
+    return `<tr data-num="${a.number}" class="app-row">
+      <td>${a.number}</td>
+      <td>${a.date}</td>
+      <td>${a.jobURL ? `<a href="${a.jobURL}" target="_blank">${a.company}</a>` : a.company}</td>
+      <td>${a.role}</td>
+      <td>${sc}</td>
+      <td><span class="badge badge-${ns}">${ns}</span></td>
+      <td class="hide-mobile">${a.notes || ''}</td>
+    </tr>`;
+  }).join('');
+
+  // Click to expand detail
+  tbody.querySelectorAll('.app-row').forEach(row => {
+    row.style.cursor = 'pointer';
+    row.addEventListener('click', (e) => {
+      if (e.target.tagName === 'A') return;
+      const num = parseInt(row.dataset.num);
+      toggleDetail(row, num);
+    });
+  });
+}
+
+function toggleDetail(row, num) {
+  // Remove existing detail row
+  const existing = document.querySelector('.detail-row');
+  if (existing) {
+    const wasNum = parseInt(existing.dataset.num);
+    existing.remove();
+    if (wasNum === num) return; // toggle off
+  }
+
+  const app = DATA.apps.find(a => a.number === num);
+  if (!app) return;
+
+  const detailHTML = `<tr class="detail-row" data-num="${num}"><td colspan="7">
+    <dl class="detail-grid">
+      ${app.archetype ? `<div><dt>Archetype</dt><dd>${app.archetype}</dd></div>` : ''}
+      ${app.tldr ? `<div><dt>TL;DR</dt><dd>${app.tldr}</dd></div>` : ''}
+      ${app.remote ? `<div><dt>Remote</dt><dd>${app.remote}</dd></div>` : ''}
+      ${app.comp ? `<div><dt>Compensation</dt><dd>${app.comp}</dd></div>` : ''}
+      ${app.notes ? `<div><dt>Notes</dt><dd>${app.notes}</dd></div>` : ''}
+      ${app.jobURL ? `<div><dt>Job URL</dt><dd><a href="${app.jobURL}" target="_blank">${app.jobURL.slice(0, 60)}...</a></dd></div>` : ''}
+    </dl>
+  </td></tr>`;
+  row.insertAdjacentHTML('afterend', detailHTML);
+}
+
+// Sort buttons
+document.querySelectorAll('.sort-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const newKey = btn.dataset.sort;
+    if (sortKey === newKey) { sortAsc = !sortAsc; }
+    else { sortKey = newKey; sortAsc = newKey === 'company'; }
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  });
+});
+
+// Column header sort
+document.querySelectorAll('th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    const sortMap = { number: 'date', date: 'date', company: 'company', role: 'company', score: 'score', status: 'status', notes: 'company' };
+    const mapped = sortMap[col] || 'date';
+    if (sortKey === mapped) { sortAsc = !sortAsc; }
+    else { sortKey = mapped; sortAsc = mapped === 'company'; }
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === sortKey));
+    renderTable();
+  });
+});
+
+// Search
+document.getElementById('search').addEventListener('input', renderTable);
+
+// Load data
+fetch('data.json')
+  .then(r => r.json())
+  .then(d => {
+    DATA = d;
+    document.getElementById('generated-at').textContent = d.generatedAt
+      ? `Updated ${new Date(d.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`
+      : '';
+    renderMetrics(d.metrics);
+    renderFilters(d.metrics);
+    renderTable();
+  })
+  .catch(() => {
+    document.getElementById('empty').style.display = 'block';
+  });
+</script>
+</body>
+</html>
